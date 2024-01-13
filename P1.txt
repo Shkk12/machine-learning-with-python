@@ -1,8 +1,41 @@
+1.Parallelize - 
 val rdd = sc.parallelize(Array(1,2,3,4,5,6,7,8,9,10)) 
 rdd.foreach(f=>{ println(f)}) 
 
+2.Read Text File - 
+val rdd2 = spark.read.textFile("C:/MYfolder/sem/sem5/DE/Practicals/Files/a1.txt")
+rdd2.foreach(f=>{ println(f)})
+val rdd = spark.sparkContext.textFile("C:/MYfolder/sem/sem5/DE/Practicals/Files/*.txt")
+rdd.foreach(f=>{ println(f)})
+val rdd2 = spark.sparkContext.wholeTextFiles("C:/MYfolder/sem/sem5/DE/Practicals/Files /*")
+rdd2.foreach(f=>{println(f._1+"=>"+f._2)})
+val rdd3 = spark.sparkContext.textFile("C:/MYfolder/sem/sem5/DE/Practicals/Files/a1.txt,C:/MYfolder/sem/sem5/DE/Practicals/Files/a2.txt")
+rdd3.foreach(f=>{println(f)})
 
-val rdd = spark.sparkContext.textFile("C:/Users/admin/Desktop/files/*") 
+4.Create RDD 
+val rdd4 = spark.sparkContext.parallelize(Seq(("Java",20000),("Python",100)))
+rdd4.foreach(println)
+val rdd3 = rdd4.map(row=>{(row._1,row._2+100)})
+rdd3.foreach(println)
+
+e.Actions - 
+val listRdd = spark.sparkContext.parallelize(List(1,2,3,4,5,3,2)) 
+val data:Array[Int] = listRdd.collect() 
+data.foreach(println) 
+
+println("Count : "+listRdd.count) 
+println("first : "+listRdd.first()) 
+
+f.Pair function - 
+val rdd = spark.sparkContext.parallelize(List("Germany India USA","USA India Russia","India Brazil Canada China")) 
+
+val wordsRdd = rdd.flatMap(_.split(" ")) 
+val pairRDD = wordsRdd.map(f=>(f,1)) 
+pairRDD.foreach(println) 
+pairRDD.distinct().foreach(println) 
+println("Sort by Key ==>") 
+val sortRDD = pairRDD.sortByKey() 
+sortRDD.foreach(println) 
 
 
 val rdd3 = 
