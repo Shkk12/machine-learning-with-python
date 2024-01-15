@@ -1,0 +1,4 @@
+1. Create an empty data frame
+val df = spark.emptyDataFrame
+df.printSchema()
+
