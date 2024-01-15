@@ -1,1 +1,63 @@
+1. Create a DataFrame with nested Array - 
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.types.{StructType, StructField, StringType, ArrayType}
+
+val arrayArrayData = Seq(
+    Row("James",List(List("Java","Scala","C++"),List("Spark","Java"))),
+    Row("Michael",List(List("Spark","Java","C++"),List("Spark","Java"))),
+    Row("Robert",List(List("CSharp","VB"),List("Spark","Python")))
+  )
+
+val arrayArraySchema = new StructType().add("name",StringType).add("subjects",ArrayType(ArrayType(StringType)))
+
+val df = spark.createDataFrame(spark.sparkContext.parallelize(arrayArrayData),arrayArraySchema)
+df.printSchema()
+df.show()
+
+2. Explode nested Arrays to rows - 
+import spark.implicits._
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.types.{StructType, StructField, StringType, ArrayType}
+
+val arrayArrayData = Seq(
+    Row("James",List(List("Java","Scala","C++"),List("Spark","Java"))),
+    Row("Michael",List(List("Spark","Java","C++"),List("Spark","Java"))),
+    Row("Robert",List(List("CSharp","VB"),List("Spark","Python")))
+  )
+val arrayArraySchema = new StructType().add("name",StringType).add("subjects",ArrayType(ArrayType(StringType)))
+val df = spark.createDataFrame(spark.sparkContext.parallelize(arrayArrayData),arrayArraySchema)
+
+val df2 = df.select($"name",explode($"subjects"))
+df2.printSchema()
+df2.show(false)
+
+3. Flatten nested Array to single Array - 
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.types.{StructType, StructField, StringType, ArrayType}
+
+val arrayArrayData = Seq(
+    Row("James",List(List("Java","Scala","C++"),List("Spark","Java"))),
+    Row("Michael",List(List("Spark","Java","C++"),List("Spark","Java"))),
+    Row("Robert",List(List("CSharp","VB"),List("Spark","Python")))
+  )
+val arrayArraySchema = new StructType().add("name",StringType).add("subjects",ArrayType(ArrayType(StringType)))
+val df = spark.createDataFrame(spark.sparkContext.parallelize(arrayArrayData),arrayArraySchema)
+val df3 = df.select($"name",flatten($"subjects"))
+df3.show(false)
+
+4. Convert array of String to a String column - 
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.types.{StructType, StructField, StringType, ArrayType}
+
+val arrayData = Seq(
+    Row("James,,Smith",List("Java","Scala","C++"),"CA"),
+    Row("Michael,Rose,",List("Spark","Java","C++"),"NJ"),
+    Row("Robert,,Williams",List("CSharp","VB"),"NV")
+  )
+val arraySchema = new StructType().add("name",StringType).add("languagesAtSchool", ArrayType(StringType)).add("currentState", StringType)
+val df = spark.createDataFrame(spark.sparkContext.parallelize(arrayData),arraySchema)
+df.printSchema()
+df.show()
+
+
 
