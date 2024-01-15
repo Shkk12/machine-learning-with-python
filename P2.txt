@@ -16,4 +16,28 @@ ds2.printSchema()
 6.
 7.
 8. Pivot and Unpivot a data frame - 
+//Pivot 
 val data = Seq(("Banana",1000,"USA"),("Carrots",2000,"Canada"),("Beans",2000,"Mexico"))
+val df = data.toDF("Product","Amount","Country") 
+df.show()
+val pivotDF = df.groupBy("Product").pivot("Country").sum("Amount")
+pivotDF.show()
+//Unpivot 
+val unPivotDF = pivotDF.select($"Product",
+expr("stack(3, 'Canada', Canada, 'China', China, 'Mexico', Mexico) as (Country,Total)")).where("Total is not null")
+unPivotDF.show()
+
+9. Create a DataFrame using StructType & StructField schema
+val simpleData = Seq(Row("James","Smith","36636","M"),
+ Row("Maria ","Anne","Jones","39192","F"))
+val simpleSchema = StructType(Array(
+ StructField("firstname",StringType,true),
+ StructField("lastname",StringType,true),
+ StructField("id", StringType, true),
+ StructField("gender", StringType, true),
+ ))
+val df = spark.createDataFrame(spark.sparkContext.parallelize(simpleData),simpleSchema)
+df.printSchema()
+df.show()
+
+1. Selecting the first row of each group
