@@ -47,14 +47,14 @@ df.show()
 val pivotDF = df.groupBy("Product").pivot("Country").sum("Amount")
 pivotDF.show()
 //Unpivot 
-val unPivotDF = pivotDF.select($"Product",
-expr("stack(3, 'Canada', Canada, 'China', China, 'Mexico', Mexico) as (Country,Total)")).where("Total is not null")
+val unPivotDF = pivotDF.select($"Product",expr("stack(3, 'Canada', Canada, 'China', China, 'Mexico', Mexico) as (Country,Total)")).where("Total is not null")
 unPivotDF.show()
 
 9. Create a DataFrame using StructType & StructField schema
 val simpleData = Seq(Row("James","Smith","36636","M"),
  Row("Maria ","Anne","Jones","39192","F"))
-val simpleSchema = StructType(Array(
+val simpleSchema = StructType(
+Array(
  StructField("firstname",StringType,true),
  StructField("lastname",StringType,true),
  StructField("id", StringType, true),
