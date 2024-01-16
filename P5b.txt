@@ -1,0 +1,329 @@
+1. Spark SQL Date and Timestamp functions -  
+import org.apache.spark.sql.functions._
+Seq(("2019-01-23"))
+  .toDF("Input")
+  .select( 
+    current_date()as("current_date"), 
+    col("Input"), 
+    date_format(col("Input"), "MM-dd-yyyy").as("format")).show()
+ 
+to_date()
+import org.apache.spark.sql.functions._
+Seq(("04/13/2019"))
+   .toDF("Input")
+  .select( col("Input"), 
+           to_date(col("Input"), "MM/dd/yyyy").as("to_date") 
+   ).show()
+ 
+datediff()
+import org.apache.spark.sql.functions._
+Seq(("2019-01-23"),("2019-06-24"),("2019-09-20"))
+   .toDF("input")
+   .select( col("input"), current_date(), 
+       datediff(current_date(),col("input")).as("diff") 
+    ).show()
+ 
+months_between()
+import org.apache.spark.sql.functions._
+Seq(("2019-01-23"),("2019-06-24"),("2019-09-20"))
+   .toDF("date")
+  .select( col("date"), current_date(), 
+       datediff(current_date(),col("date")).as("datediff"), 
+       months_between(current_date(),col("date")).as("months_between")
+   ).show()
+ add_months() , date_add(), date_sub()
+import org.apache.spark.sql.functions._
+Seq(("2019-01-23"),("2019-06-24"),("2019-09-20")).toDF("input")
+  .select( col("input"), 
+      add_months(col("input"),3).as("add_months"), 
+      add_months(col("input"),-3).as("sub_months"), 
+      date_add(col("input"),4).as("date_add"), 
+      date_sub(col("input"),4).as("date_sub") 
+   ).show()
+ year(), month(), month() dayofweek(), dayofmonth(), dayofyear() next_day(), weekofyear()
+import org.apache.spark.sql.functions._
+Seq(("2023-01-23"),("2023-06-24"),("2024-09-20"))
+  .toDF("input")
+ 
+  .select( col("input"), year(col("input")).as("year"), 
+       month(col("input")).as("month"), 
+       dayofweek(col("input")).as("dayofweek"), 
+       dayofmonth(col("input")).as("dayofmonth"), 
+       dayofyear(col("input")).as("dayofyear"), 
+       next_day(col("input"),"Sunday").as("next_day"), 
+       weekofyear(col("input")).as("weekofyear") 
+   ).show()
+ 
+current_timestamp()
+import org.apache.spark.sql.functions._
+val df = Seq((1)).toDF("seq")
+val curDate = df.withColumn("current_date",current_date().as("current_date"))
+ .withColumn("current_timestamp",current_timestamp().as("current_timestamp"))
+curDate.show(false)
+ to_timestamp()
+import org.apache.spark.sql.functions._
+  val dfDate = Seq(("07-01-2019 12 01 19 406"),
+    ("06-24-2019 12 01 19 406"),
+    ("11-16-2019 16 44 55 406"),
+    ("11-16-2019 16 50 59 406")).toDF("input_timestamp")
+dfDate.withColumn("datetype_timestamp",
+          to_timestamp(col("input_timestamp"),"MM-dd-yyyy HH mm ss SSS"))
+    .show(false)
+ hour(), Minute() and second()
+import org.apache.spark.sql.functions._
+  val df = Seq(("2019-07-01 12:01:19.000"),
+    ("2019-06-24 12:01:19.000"),
+    ("2019-11-16 16:44:55.406"),
+    ("2019-11-16 16:50:59.406")).toDF("input_timestamp")
+df.withColumn("hour", hour(col("input_timestamp")))
+    .withColumn("minute", minute(col("input_timestamp")))
+    .withColumn("second", second(col("input_timestamp")))
+    .show(false)
+
+2. Spark JSON Functions - 
+create DataFrame with a column contains JSON string.
+
+val jsonString="""{"Zipcode":704,"ZipCodeType":"STANDARD","City":"PARC PARQUE","State":"PR"}"""
+val data = Seq((1, jsonString))
+import spark.implicits._
+val df=data.toDF("id","value")
+df.show(false)
+
+
+from_json() – Converts JSON string into Struct type or Map type
+
+import org.apache.spark.sql.functions.{from_json,col}
+import org.apache.spark.sql.types.{MapType, StringType}
+val df2=df.withColumn("value",from_json(col("value"),MapType(StringType,StringType)))
+df2.printSchema()
+df2.show(false)
+
+to_json() – Converts MapType or Struct type to JSON string
+
+import org.apache.spark.sql.functions.{to_json}
+df2.withColumn("value",to_json(col("value")))
+   .show(false)
+  
+json_tuple() – Extract the Data from JSON and create them as new columns
+
+import org.apache.spark.sql.functions.{json_tuple}
+df.select(col("id"),json_tuple(col("value"),"Zipcode","ZipCodeType","City"))
+  .toDF("id","Zipcode","ZipCodeType","City")
+  .show(false)
+get_json_object() – Extracts JSON element from a JSON string based on json path specified
+
+import org.apache.spark.sql.functions.{get_json_object}
+df.select(col("id"),get_json_object(col("value"),"$.ZipCodeType").as("ZipCodeType")).show(false)
+
+3.Spark SQL Map functions
+create a DataFrame with some sample data to work with.
+val structureData = Seq(
+    Row("36636","Finance",Row(3000,"USA")),
+    Row("40288","Finance",Row(5000,"IND")),
+    Row("42114","Sales",Row(3900,"USA")),
+    Row("39192","Marketing",Row(2500,"CAN")),
+    Row("34534","Sales",Row(6500,"USA"))
+  )
+  val structureSchema = new StructType()
+    .add("id",StringType)
+    .add("dept",StringType)
+    .add("properties",new StructType()
+      .add("salary",IntegerType)
+      .add("location",StringType)
+    )
+  var df = spark.createDataFrame(
+    spark.sparkContext.parallelize(structureData),structureSchema)
+  df.printSchema()
+  df.show(false)
+
+map()
+Syntax -  map(cols: Column*): Column
+val index = df.schema.fieldIndex("properties")
+  val propSchema = df.schema(index).dataType.asInstanceOf[StructType]
+  var columns = mutable.LinkedHashSet[Column]()
+  propSchema.fields.foreach(field =>{
+    columns.add(lit(field.name))
+    columns.add(col("properties." + field.name))
+  })
+  df = df.withColumn("propertiesMap",map(columns.toSeq:_*))
+  df = df.drop("properties")
+  df.printSchema()
+  df.show(false)
+map_keys() – Returns map keys from a Spark SQL
+
+Syntax -  map_keys(e: Column): Column
+
+df.select(col("id"),map_keys(col("propertiesMap"))).show(false)
+map_values() – Returns map values from a Spark DataFrame
+Syntax -  map_values(e: Column): Column
+df.select(col("id"),map_values(col("propertiesMap")))
+    .show(false)
+map_concat() – Concatenating two or more maps on DataFrame
+Syntax - map_concat(cols: Column*): Column
+val arrayStructureData = Seq(
+    Row("James",List(Row("Newark","NY"),Row("Brooklyn","NY")),Map("hair"->"black","eye"->"brown"), Map("height"->"5.9")),
+  Row("Michael",List(Row("SanJose","CA"),Row("Sandiago","CA")),Map("hair"->"brown","eye"->"black"),Map("height"->"6")),
+  Row("Robert",List(Row("LasVegas","NV")),Map("hair"->"red","eye"->"gray"),Map("height"->"6.3")),
+  Row("Maria",null,Map("hair"->"blond","eye"->"red"),Map("height"->"5.6")),
+  Row("Jen",List(Row("LAX","CA"),Row("Orange","CA")),Map("white"->"black","eye"->"black"),Map("height"->"5.2"))
+  )
+  val arrayStructureSchema = new StructType()
+    .add("name",StringType)
+    .add("addresses", ArrayType(new StructType()
+      .add("city",StringType)
+      .add("state",StringType)))
+    .add("properties", MapType(StringType,StringType))
+    .add("secondProp", MapType(StringType,StringType))
+  val concatDF = spark.createDataFrame(
+    spark.sparkContext.parallelize(arrayStructureData),arrayStructureSchema)
+concatDF.withColumn("mapConcat",map_concat(col("properties"),col("secondProp")))
+    .select("name","mapConcat")
+    .show(false)
+
+ 
+
+map_from_entries() – convert array of StructType entries to map
+
+
+concatDF.withColumn("mapFromEntries",map_from_entries(col("addresses")))
+    .select("name","mapFromEntries")
+    .show(false)
+
+ 
+
+ 
+
+4. Spark Window Functions
+
+
+create a DataFrame
+
+  import spark.implicits._
+
+  val simpleData = Seq(("James", "Sales", 3000),
+    ("Michael", "Sales", 4600),
+    ("Robert", "Sales", 4100),
+    ("Maria", "Finance", 3000),
+    ("James", "Sales", 3000),
+    ("Scott", "Finance", 3300),
+    ("Jen", "Finance", 3900),
+    ("Jeff", "Marketing", 3000),
+    ("Kumar", "Marketing", 2000),
+    ("Saif", "Sales", 4100)
+  )
+  val df = simpleData.toDF("employee_name", "department", "salary")
+  df.show()
+
+
+ 
+
+
+Spark Window Ranking functions
+2.1 row_number Window Function
+
+
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.expressions.Window
+
+//row_number
+val windowSpec  = Window.partitionBy("department").orderBy("salary")
+df.withColumn("row_number",row_number.over(windowSpec))
+  .show()
+
+ 
+
+
+2.2 rank Window Function
+
+
+import org.apache.spark.sql.functions._
+//rank
+df.withColumn("rank",rank().over(windowSpec))
+  .show()
+
+
+ 
+
+2.3 dense_rank Window Function
+
+
+import org.apache.spark.sql.functions._
+//dens_rank
+df.withColumn("dense_rank",dense_rank().over(windowSpec))
+  .show()
+
+ 
+
+2.4 percent_rank Window Function
+
+
+import org.apache.spark.sql.functions._
+//percent_rank
+df.withColumn("percent_rank",percent_rank().over(windowSpec))
+  .show()
+
+ 
+
+
+
+2.5 ntile Window Function
+
+
+//ntile
+df.withColumn("ntile",ntile(2).over(windowSpec))
+  .show()
+
+ 
+
+3. Spark Window Analytic functions
+3.1 cume_dist Window Function
+
+
+//cume_dist
+df.withColumn("cume_dist",cume_dist().over(windowSpec))
+  .show()
+
+
+ 
+
+
+3.2 lag Window Function
+
+
+//lag
+df.withColumn("lag",lag("salary",2).over(windowSpec))
+   .show()
+
+ 
+
+4. Spark Window Aggregate Functions
+
+
+val windowSpecAgg  = Window.partitionBy("department")
+
+val aggDF = df.withColumn("row",row_number.over(windowSpec))
+    .withColumn("avg", avg(col("salary")).over(windowSpecAgg))
+    .withColumn("sum", sum(col("salary")).over(windowSpecAgg))
+    .withColumn("min", min(col("salary")).over(windowSpecAgg))
+    .withColumn("max", max(col("salary")).over(windowSpecAgg))
+    .where(col("row")===1).select("department","avg","sum","min","max")
+    .show()
+
+
+ 
+=========================================p6==================================================================
+import org.apache.spark.sql.types._
+val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+ val dfs = sqlContext.read.json("C:/Program Files/spark-3.4.1-bin-hadoop3/examples/src/main/resources/employee.json")
+dfs.show()
+ 
+dfs.printSchema()
+ 
+dfs.select("name").show()
+ 
+dfs.filter(dfs("age") > 23).show()
+ 
+dfs.groupBy("age").count().show()
+
+ 
+ 
