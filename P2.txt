@@ -64,4 +64,208 @@ val df = spark.createDataFrame(spark.sparkContext.parallelize(simpleData),simple
 df.printSchema()
 df.show()
 
-1. Selecting the first row of each group
+//-------- 2b --------
+
+1. Selecting the first row of each group - 
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.expressions.Window
+import org.apache.spark.sql.functions._
+import spark.implicits._
+val simpleData = Seq(("James","Sales",3000),
+      ("Michael","Sales",4600),
+      ("Robert","Sales",4100),
+      ("Maria","Finance",3000),
+      ("Raman","Finance",3000),
+      ("Scott","Finance",3300),
+      ("Jen","Finance",3900),
+      ("Jeff","Marketing",3000),
+      ("Kumar","Marketing",2000)
+    )   
+val df = simpleData.toDF("employee_name","department","salary")
+df.show()
+ // Get the first row from a group.
+val w2 = Window.partitionBy("department").orderBy(col("salary"))
+df.withColumn("row",row_number.over(w2)).where($"row" === 1).drop("row").show()
+
+2. Sort DataFrame
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.functions._
+import spark.implicits._
+  val simpleData = Seq(("James","Sales","NY",90000,34,10000),
+    ("Michael","Sales","NY",86000,56,20000),
+    ("Robert","Sales","CA",81000,30,23000),
+    ("Maria","Finance","CA",90000,24,23000),
+    ("Raman","Finance","CA",99000,40,24000),
+    ("Scott","Finance","NY",83000,36,19000),
+    ("Jen","Finance","NY",79000,53,15000),
+    ("Jeff","Marketing","CA",80000,25,18000),
+    ("Kumar","Marketing","NY",91000,50,21000)
+  )
+val df = simpleData.toDF("employee_name","department","state","salary","age","bonus")
+  df.printSchema()
+  df.show()
+  df.sort("department","state").show(false)
+  df.sort(col("department"),col("state")).show(false)
+  df.orderBy("department","state").show(false)
+  df.orderBy(col("department"),col("state")).show(false)
+  df.sort(col("department").asc,col("state").asc).show(false)
+  df.orderBy(col("department").asc,col("state").asc).show(false)
+  df.sort(col("department").asc,col("state").desc).show(false)
+
+3. Union Dataframe
+import org.apache.spark.sql.SparkSession
+import spark.implicits._
+val simpleData = Seq(("James","Sales","NY",90000,34,10000),
+    ("Michael","Sales","NY",86000,56,20000),
+    ("Robert","Sales","CA",81000,30,23000),
+    ("Maria","Finance","CA",90000,24,23000)
+  )
+val df = simpleData.toDF("employee_name","department","state","salary","age","bonus")
+df.printSchema()
+df.show()
+val simpleData2 = Seq(("James","Sales","NY",90000,34,10000),
+    ("Maria","Finance","CA",90000,24,23000),
+    ("Jen","Finance","NY",79000,53,15000),
+    ("Jeff","Marketing","CA",80000,25,18000),
+    ("Kumar","Marketing","NY",91000,50,21000)
+  )
+val df2 = simpleData2.toDF("employee_name","department","state","salary","age","bonus")
+df2.show(false)
+val df3 = df.union(df2)  
+df3.show(false)
+df3.distinct().show(false)
+val df4 = df.unionAll(df2)
+df4.show(false)
+
+4. Drop Rows with null values from DataFrame
+
+val filePath="small_zipcode.csv"
+val df = spark.read.options(Map("inferSchema"->"true","delimiter"->",","header"->"true")).csv(filePath)
+df.printSchema()
+df.show(false)
+df.na.drop().show(false)
+// All/any
+df.na.drop("any").show(false)
+df.na.drop(Seq("population","type")).show(false) 
+
+5. Split dataframe single column to multiple columns
+
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.functions._
+import spark.sqlContext.implicits._
+val data = Seq(("James, A, Smith","2018","M",3000),
+    ("Michael, Rose, Jones","2010","M",4000),
+    ("Robert,K,Williams","2010","M",4000),
+    ("Maria,Anne,Jones","2005","F",4000),
+    ("Jen,Mary,Brown","2010","",-1)
+  )
+val df = data.toDF("name","dob_year","gender","salary")
+df.printSchema()
+  df.show(false)
+  val df2 = df.select(split(col("name"),",").getItem(0).as("FirstName"),split(col("name"),",").getItem(1).as("MiddleName"),split(col("name"),",").getItem(2).as("LastName")).drop("name")
+  df2.printSchema()
+df2.show(false)
+  val splitDF = df.withColumn("FirstName",split(col("name"),",").getItem(0)).withColumn("MiddleName",split(col("name"),",").getItem(1)).withColumn("LastName",split(col("name"),",").getItem(2)).withColumn("NameArray",split(col("name"),",")).drop("name")
+
+splitDF.printSchema()
+  splitDF.show(false)  
+df.createOrReplaceTempView("PERSON")
+spark.sql("select SPLIT(name,',') as NameArray from PERSON").show(false)
+
+6. Concatenate dataframe multiple columns
+
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.functions.{lit, _}
+val data = Seq(("James","A","Smith","2018","M",3000),
+    ("Michael","Rose","Jones","2010","M",4000),
+    ("Robert","K","Williams","2010","M",4000),
+    ("Maria","Anne","Jones","2005","F",4000),
+    ("Jen","Mary","Brown","2010","",-1)
+  )
+val columns = Seq("fname","mname","lname","dob_year","gender","salary")
+ import spark.sqlContext.implicits._
+  val df = data.toDF(columns:_*)
+df.printSchema()
+  df.show(false)
+df.select(concat(col("fname"),lit(','), col("mname"),lit(','),col("lname")).as("FullName")).show(false)
+  df.withColumn("FullName",concat(col("fname"),lit(','),col("mname"),lit(','),col("lname"))).drop("fname").drop("mname").drop("lname").show(false)
+  df.withColumn("FullName",concat_ws(",",col("fname"),col("mname"),col("lname"))).drop("fname").drop("mname").drop("lname").show(false)
+df.createOrReplaceTempView("EMP")
+spark.sql("select CONCAT(fname,' ',lname,' ',mname) as FullName from EMP").show(false)
+spark.sql("select fname ||' '|| lname ||' '|| mname as FullName from EMP").show(false)
+
+7. Replace null values in DataFrame
+import org.apache.spark.sql.SparkSession
+val filePath="small_zipcode.csv"
+  val df = spark.read.options(Map("inferSchema"->"true","delimiter"->",","header"->"true")).csv(filePath)
+df.printSchema()
+  df.show(false)
+df.na.fill(0).show(false)
+  df.na.fill(0,Array("population")).show(false)
+  df.na.fill("").show(false)
+  df.na.fill("unknown",Array("city")).na.fill("",Array("type")).show(false)
+
+8. Remove duplicate rows on DataFrame (after join)
+import org.apache.spark.sql.{SparkSession, DataFrame}
+// Create the first DataFrame
+val data1 = Seq(
+  (1, "Product A", 100),
+  (2, "Product B", 200),
+  (3, "Product C", 150)
+)
+val df1: DataFrame = spark.createDataFrame(data1).toDF("id", "product", "quantity")
+// Create the second DataFrame
+val data2 = Seq(
+  (1, "Product A", 1000),
+  (2, "Product B", 1500),
+  (3, "Product C", 1200)
+)
+val df2: DataFrame = spark.createDataFrame(data2).toDF("id", "product", "revenue")
+// Join the df1 DataFrame with df2
+val joinedDF1 = df1.join(df2, Seq("id"))
+display(joinedDF1)
+//Various ways to remove duplicate columns
+//Method 1 - Rename Specifying column names to select before joining
+// Rename column in df1 before joining
+val df1Renamed = df1.withColumnRenamed("product", "product_name")
+
+ 
+
+// Join the renamed DataFrame with df2
+val joinedDF1 = df1Renamed.join(df2, Seq("id"))
+
+ 
+// Select the desired columns explicitly
+val result1 = joinedDF1.select("id", "product_name", "quantity", "product", "revenue")
+display(result1)
+
+ 
+
+9. Remove distinct on multiple selected columns ( get distinct multiple columns)
+
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.functions._
+import spark.implicits._
+  val simpleData = Seq(("James", "Sales", 3000),
+    ("Michael", "Sales", 4600),
+    ("Robert", "Sales", 4100),
+    ("Maria", "Finance", 3000),
+    ("James", "Sales", 3000),
+    ("Scott", "Finance", 3300),
+    ("Jen", "Finance", 3900),
+    ("Jeff", "Marketing", 3000),
+    ("Kumar", "Marketing", 2000),
+    ("Saif", "Sales", 4100)
+  )
+
+val df = simpleData.toDF("employee_name", "department", "salary")
+  df.show()
+ 
+//Distinct all columns
+  val distinctDF = df.distinct()
+  println("Distinct count: "+distinctDF.count())
+  distinctDF.show(false)
+val df2 = df.dropDuplicates()
+  println("Distinct count: "+df2.count())
+  df2.show(false)
+
