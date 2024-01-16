@@ -1,0 +1,116 @@
+1. Spark SQL Joins
+  val emp = Seq((1,"Smith",-1,"2018","10","M",3000),
+    (2,"Rose",1,"2010","20","M",4000),
+    (3,"Williams",1,"2010","10","M",1000),
+    (4,"Jones",2,"2005","10","F",2000),
+    (5,"Brown",2,"2010","40","",-1),
+      (6,"Brown",2,"2010","50","",-1)
+  )
+   val empColumns = Seq("emp_id","name","superior_emp_id","year_joined",
+       "emp_dept_id","gender","salary")
+  import spark.sqlContext.implicits._
+  val empDF = emp.toDF(empColumns:_*)
+  empDF.show(false)
+   val dept = Seq(("Finance",10),
+    ("Marketing",20),
+    ("Sales",30),
+    ("IT",40)
+  )  
+ val deptColumns = Seq("dept_name","dept_id")
+  val deptDF = dept.toDF(deptColumns:_*)
+  deptDF.show(false)
+ 
+//Inner Join
+  empDF.join(deptDF,empDF("emp_dept_id") ===  deptDF("dept_id"),"inner")
+    .show(false)
+ 
+//Full Outer Join
+  empDF.join(deptDF,empDF("emp_dept_id") ===  deptDF("dept_id"),"outer")
+    .show(false)
+ 
+  empDF.join(deptDF,empDF("emp_dept_id") ===  deptDF("dept_id"),"full")
+    .show(false)
+ 
+  empDF.join(deptDF,empDF("emp_dept_id") ===  deptDF("dept_id"),"fullouter")
+    .show(false)
+ 
+//Left Outer Join
+  empDF.join(deptDF,empDF("emp_dept_id") ===  deptDF("dept_id"),"left")
+    .show(false)
+ 
+  empDF.join(deptDF,empDF("emp_dept_id") ===  deptDF("dept_id"),"leftouter")
+    .show(false)
+ 
+//Right Outer Join
+  empDF.join(deptDF,empDF("emp_dept_id") ===  deptDF("dept_id"),"right")
+   .show(false)
+ 
+  empDF.join(deptDF,empDF("emp_dept_id") ===  deptDF("dept_id"),"rightouter")
+   .show(false)
+ 
+//Left Semi Join
+  empDF.join(deptDF,empDF("emp_dept_id") ===  deptDF("dept_id"),"leftsemi")
+    .show(false)
+ 
+//Left Anti Join
+  empDF.join(deptDF,empDF("emp_dept_id") ===  deptDF("dept_id"),"leftanti")
+    .show(false)
+ 
+//Self Join
+empDF.as("emp1").join(empDF.as("emp2"),
+ col("emp1.superior_emp_id") === col("emp2.emp_id"),"inner")
+ .select(col("emp1.emp_id"),col("emp1.name"),
+ col("emp2.emp_id").as("superior_emp_id"),
+ col("emp2.name").as("superior_emp_name"))
+ .show(false)
+ 
+2. Spark Convert case class to Schema
+
+// Using Scala code to create schema from case class
+import org.apache.spark.sql.Encoders 
+import org.apache.spark.sql.types.StructType
+ 
+object CaseClassSparkSchema extends App{
+case class Name(first:String,last:String,middle:String) 
+case class Employee(fullName:Name,age:Integer,gender:String)
+val encoderSchema = Encoders.product[Employee].schema 
+encoderSchema.printTreeString()}
+ 
+3. Create a data frame with array o Struct columns
+val arrayStructData = Seq(
+      Row("James",List(Row("Java","XX",120),Row("Scala","XA",300))),
+      Row("Michael",List(Row("Java","XY",200),Row("Scala","XB",500))),
+      Row("Robert",List(Row("Java","XZ",400),Row("Scala","XC",250))),
+      Row("Washington",null)
+    )
+val arrayStructSchema = new StructType().add("name",StringType).add("booksIntersted",ArrayType(new StructType().add("name",StringType).add("author",StringType).add("pages",IntegerType)))
+val df = spark.createDataFrame(spark.sparkContext.parallelize(arrayStructData),arrayStructSchema)
+df.printSchema()
+df.show()
+ 
+4. Explode Array of Struct type
+// Explode Array of Struct type
+import spark.implicits._
+val df2= df.select($"name",explode($"booksIntersted"))
+df2.printSchema()
+ df2.show(false)
+ 
+Collect_list function is used to create a list
+df2.groupBy($"name").agg(collect_list($"col").as("booksIntersted"))
+     .show(false)
+ 
+5. Spark Flatten Nested Array to Single Array Column
+val arrayArrayData = Seq(
+   Row("James",List(List("Java","Scala","C++"),List("Spark","Java"))),
+   Row("Michael",List(List("Spark","Java","C++"),List("Spark","Java"))),
+   Row("Robert",List(List("CSharp","VB"),List("Spark","Python")))
+  )
+val arrayArraySchema = new StructType().add("name",StringType).add("subjects",ArrayType(ArrayType(StringType)))
+val df = spark.createDataFrame(spark.sparkContext.parallelize(arrayArrayData),arrayArraySchema)
+df.printSchema()
+df.show()
+ 
+Flatten – Nested array to single array
+// Flatten - Nested array to single array
+Syntax : flatten(e: Column): Column
+df.select($"name",flatten($"subjects")).show(false)
