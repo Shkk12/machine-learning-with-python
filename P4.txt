@@ -15,11 +15,9 @@ import spark.implicits._
   val df = simpleData.toDF("employee_name", "department", "salary")
   df.show()
 //approx_count_distinct
-println("approx_count_distinct: "+
-    df.select(approx_count_distinct("salary")).collect()(0)(0))
+println("approx_count_distinct: "+ df.select(approx_count_distinct("salary")).collect()(0)(0))
 //avg (average) Aggregate Function
-println("avg: "+
-    df.select(avg("salary")).collect()(0)(0))
+println("avg: "+ df.select(avg("salary")).collect()(0)(0))
 //max()
 df.select(max("salary")).show(false)
 //min()
